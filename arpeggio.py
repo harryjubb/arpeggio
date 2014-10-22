@@ -38,7 +38,7 @@ import openbabel as ob
 # CONSTANTS #
 #############
 
-from config import ATOM_TYPES, CONTACT_TYPES, VDW_RADII, METALS, HALOGENS, CONTACT_TYPES_DIST_MAX, FEATURE_SIFT, VALENCE, MAINCHAIN_ATOMS
+from config import ATOM_TYPES, CONTACT_TYPES, VDW_RADII, METALS, HALOGENS, CONTACT_TYPES_DIST_MAX, FEATURE_SIFT, VALENCE, MAINCHAIN_ATOMS, THETA_REQUIRED
 
 ###########
 # CLASSES #
@@ -950,7 +950,7 @@ Dependencies:
     # INITIALISE RESIDUE SIFTS
     for residue in s.get_residues():
         
-        # POLYPEPTIDE FLAG
+        # INITIALISE POLYPEPTIDE FLAG
         residue.is_polypeptide = False
         
         # INTEGER SIFTS
@@ -964,16 +964,66 @@ Dependencies:
         residue.ring_ring_inter_integer_sift = [0] * 9
         
         # ATOM-RING SIFTS
-        residue.ring_atom_inter_integer_sift = [0] * 4
-        residue.atom_ring_inter_integer_sift = [0] * 4
-        residue.mc_atom_ring_inter_integer_sift = [0] * 4
-        residue.sc_atom_ring_inter_integer_sift = [0] * 4
-        
+        residue.ring_atom_inter_integer_sift = [0] * 5
+        residue.atom_ring_inter_integer_sift = [0] * 5
+        residue.mc_atom_ring_inter_integer_sift = [0] * 5
+        residue.sc_atom_ring_inter_integer_sift = [0] * 5
     
-    # DETECT POLYPEPTIDE RESIDUES
+    logging.info('Initialised SIFts.')
+    
+    # DETECT POLYPEPTIDES, RESIDUES, CHAIN BREAKS AND TERMINI
     ppb = PPBuilder()
     polypeptides = ppb.build_peptides(s, aa_only=False)
     
+    # CHAIN BREAKS AND TERMINI
+    
+    # MAKE DATA STRUCTURES FOR CHAIN POLYPEPTIDES
+    chain_ids = set([x.id for x in s.get_chains()])
+    chain_pieces = OrderedDict()
+    chain_polypeptides = OrderedDict()
+    chain_break_residues = OrderedDict()
+    chain_termini = OrderedDict()
+    #chain_sequences = OrderedDict()
+    
+    for chain_id in chain_ids:
+        chain_pieces[chain_id] = 0
+        chain_break_residues[chain_id] = []
+        chain_polypeptides[chain_id] = []
+    
+    # GET THE CHAIN_ID(S) ASSOCIATED WITH EACH POLYPEPTIDE
+    polypeptide_chain_id_sets = [set([k.get_parent().id for k in x]) for x in polypeptides]
+    
+    for e, polypeptide_chain_id_set in enumerate(polypeptide_chain_id_sets):
+    
+        # WARN IF NOT JUST ONE CHAIN ID ASSOCIATED WITH THE POLYPEPTIDE
+        if len(polypeptide_chain_id_set) != 1:
+            logging.warn('A polypeptide had {} chains associated with it: {}'.format(len(polypeptide_chain_id_set),
+                                                                                   polypeptide_chain_id_set))
+    
+        for polypeptide_chain_id in polypeptide_chain_id_set:
+            chain_pieces[polypeptide_chain_id] = chain_pieces[polypeptide_chain_id] + 1
+    
+            # ADD FIRST AND LAST RESIDUE TO THE CHAIN BREAK RESIDUES (POLYPEPTIDE TERMINAL RESIDUES)
+            chain_break_residues[polypeptide_chain_id] = chain_break_residues[polypeptide_chain_id] + [polypeptides[e][0], polypeptides[e][-1]]
+            chain_polypeptides[polypeptide_chain_id] = chain_polypeptides[polypeptide_chain_id] + [polypeptides[e]]
+            
+    # CHAIN BREAKS AND TERMINI
+    for chain_id in chain_break_residues:
+        
+        # GET FIRST AND LAST ("GENUINE") TERMINI
+        chain_termini[chain_id] = [chain_break_residues[chain_id][0], chain_break_residues[chain_id][-1]]
+        
+        # POP OUT THE FIRST AND LAST RESIDUES FROM THE CHAIN BREAK RESIDUES
+        # TO REMOVE THE GENUINE TERMINI
+        chain_break_residues[chain_id] = chain_break_residues[chain_id][1:-1]
+    
+    all_chain_break_residues = reduce(operator.add, chain_break_residues.values())
+    all_terminal_residues = reduce(operator.add, chain_termini.values())
+    
+    # AMIDES FOR AMIDE-RELATED NON-BONDING INTERACTIONS
+    amides = OrderedDict()
+    
+    # POLYPEPTIDE RESIDUES
     polypeptide_residues = set([])
     
     for pp in polypeptides:
@@ -986,6 +1036,19 @@ Dependencies:
             polypeptide_residues.add(residue)
             residue.is_polypeptide = True
             
+            # FLAG IF CHAIN BREAK OR TERMINAL
+            residue.is_chain_break = False
+            residue.is_terminal = False
+            residue.is_terminal_or_break = False
+            
+            if residue in all_chain_break_residues:
+                residue.is_chain_break = True
+                
+            if residue in all_terminal_residues:
+                residue.is_terminal = True
+                
+            residue.is_terminal_or_break = residue.is_terminal or residue.is_chain_break
+            
             # DETERMINE PRECEEDING AND NEXT RESIDUES IN THE SEQUENCE
             residue.prev_residue = None
             residue.next_residue = None
@@ -996,6 +1059,31 @@ Dependencies:
                 last_residue.next_residue = residue
                 
             last_residue = residue
+        
+        # AROUND AGAIN AFTER ASSIGNING NEXT/PREV RESIDUE
+        # TO ASSIGN AMIDES (WHICH REQUIRES NEXT RESIDUE)
+        
+        for residue in pp:
+            
+            if not hasattr(residue, 'next_residue'):
+                continue
+            
+            if not residue.is_terminal_or_break:
+                
+                # GET AMIDE BOND ATOMS
+                ca = residue.child_dict['CA']
+                c = residue.child_dict['C']
+                o = residue.child_dict['O']
+                n = residue.next_residue.child_dict['N']
+                
+                # GET AMIDE BOND CENTROID
+                # DETERMINED AS CENTRE OF MASS OF C-O-N
+                con = np.array([c.coord, o.coord, n.coord])
+                amide_centroid = con.sum(0) / len(con)
+                
+                # GET AMIDE BOND PLANE
+    
+    logging.info('Determined polypeptide residues, chain breaks, termini') # and amide bonds.')
     
     # PERCIEVE AROMATIC RINGS
     s.rings = OrderedDict()
@@ -1657,6 +1745,9 @@ Dependencies:
                 if not ring_key in selection_ring_ids and not ring_key2 in selection_ring_ids:
                     contact_type = 'INTRA_NON_SELECTION'
                     
+                if ring_key in selection_plus_ring_ids and ring_key2 in selection_plus_ring_ids:
+                    contact_type = 'INTRA_BINDING_SITE'
+                    
                 if ring_key in selection_ring_ids and ring_key2 in selection_ring_ids:
                     contact_type = 'INTRA_SELECTION'
                     
@@ -1766,7 +1857,7 @@ Dependencies:
                 # GET DISTANCE AND CHECK IF FAR ENOUGH
                 distance = np.linalg.norm(atom.coord - ring['center'])
                 
-                if distance > CONTACT_TYPES['aromatic']['atom_aromatic_distance'] or 'aromatic' in atom.atom_types:
+                if 'aromatic' in atom.atom_types:
                     continue
                 
                 # CHECK IF INTRA-RESIDUE
@@ -1780,7 +1871,10 @@ Dependencies:
                 
                 if not ring_key in selection_ring_ids and not atom in selection_set:
                     contact_type = 'INTRA_NON_SELECTION'
-                    
+                
+                if ring_key in selection_plus_ring_ids and atom in selection_plus:
+                    contact_type = 'INTRA_BINDING_SITE'
+                
                 if ring_key in selection_ring_ids and atom in selection_set:
                     contact_type = 'INTRA_SELECTION'
                     
@@ -1790,72 +1884,75 @@ Dependencies:
                 # DETERMINE INTERACTIONS
                 potential_interactions = set([])
                 
-                if atom.element == 'C' and 'weak hbond donor' in atom.atom_types:
-                    potential_interactions.add('CARBONPI')
-                
-                if 'pos ionisable' in atom.atom_types:
-                    potential_interactions.add('CATIONPI')
-                    
-                if 'hbond donor' in atom.atom_types:
-                    potential_interactions.add('DONORPI')
-                
-                if 'xbond donor' in atom.atom_types:
-                    potential_interactions.add('HALOGENPI')
-                
-                if not potential_interactions:
-                    continue
-                
-                if len(potential_interactions) != 1:
-                    logging.warn('More than one atom-ring interaction type for <atom: {}>:<ring: {}>.'.format(make_pymol_string(atom), ring_key))
-                
-                interaction_type = list(potential_interactions)[0]
-                
                 # N.B.: NOT SURE WHY ADRIAN WAS USING SIGNED, BUT IT SEEMS
                 #       THAT TO FIT THE CRITERIA FOR EACH TYPE OF INTERACTION
                 #       BELOW, SHOULD BE UNSIGNED, I.E. `abs()`
                 theta = abs(ring_angle(ring, ring['center'] - atom.coord, True, True)) # CHECK IF `atom.coord` or `ring['center'] - atom.coord`
+                
+                if distance <= CONTACT_TYPES['aromatic']['atom_aromatic_distance'] and theta <= 30.0:
+                
+                    if atom.element == 'C' and 'weak hbond donor' in atom.atom_types:
+                        potential_interactions.add('CARBONPI')
+                    
+                    if 'pos ionisable' in atom.atom_types:
+                        potential_interactions.add('CATIONPI')
+                        
+                    if 'hbond donor' in atom.atom_types:
+                        potential_interactions.add('DONORPI')
+                    
+                    if 'xbond donor' in atom.atom_types:
+                        potential_interactions.add('HALOGENPI')
+                
+                if distance <= CONTACT_TYPES['aromatic']['met_sulphur_aromatic_distance']:
+                
+                    if atom.get_parent().resname == 'MET' and atom.element == 'S':
+                        potential_interactions.add('METSULPHURPI')
+                
+                if not potential_interactions:
+                    continue
+                
+                interaction_type = list(potential_interactions)[0]
                 
                 # OUTPUT INTRA/INTER RESIDUE AS TEXT RATHER THAN BOOLEAN
                 intra_residue_text = 'INTER_RESIDUE'
                 
                 if intra_residue:
                     intra_residue_text = 'INTRA_RESIDUE'
+                    
+                #logging.info('Atom: <{}>     Theta = {}'.format(atom.get_full_id(), theta))
                 
-                if theta <= 30.0:
-                    
-                    #logging.info('Atom: <{}>     Theta = {}'.format(atom.get_full_id(), theta))
-                    
-                    # RESIDUE RING-ATOM SIFT
-                    if contact_type == 'INTER':
-                    
-                        for k, i_type in enumerate(('CARBONPI', 'CATIONPI', 'DONORPI', 'HALOGENPI')):
+                # RESIDUE RING-ATOM SIFT
+                if contact_type == 'INTER':
+                
+                    for k, i_type in enumerate(('CARBONPI', 'CATIONPI', 'DONORPI', 'HALOGENPI', 'METSULPHURPI')):
+                        
+                        for potential_interaction in potential_interactions:
                             
-                            for potential_interaction in potential_interactions:
+                            if potential_interaction == i_type:
                                 
-                                if potential_interaction == i_type:
+                                ring['residue'].ring_atom_inter_integer_sift[k] = ring['residue'].ring_atom_inter_integer_sift[k] + 1
+                                atom.get_parent().atom_ring_inter_integer_sift[k] = atom.get_parent().atom_ring_inter_integer_sift[k] + 1
+                                
+                                if atom.get_parent() in polypeptide_residues:
                                     
-                                    ring['residue'].ring_atom_inter_integer_sift[k] = ring['residue'].ring_atom_inter_integer_sift[k] + 1
-                                    atom.get_parent().atom_ring_inter_integer_sift[k] = atom.get_parent().atom_ring_inter_integer_sift[k] + 1
+                                    if atom.name in MAINCHAIN_ATOMS:
+                                        atom.get_parent().mc_atom_ring_inter_integer_sift[k] = atom.get_parent().mc_atom_ring_inter_integer_sift[k] + 1
                                     
-                                    if atom.get_parent() in polypeptide_residues:
-                                        
-                                        if atom.name in MAINCHAIN_ATOMS:
-                                            atom.get_parent().mc_atom_ring_inter_integer_sift[k] = atom.get_parent().mc_atom_ring_inter_integer_sift[k] + 1
-                                        
-                                        else:
-                                            atom.get_parent().sc_atom_ring_inter_integer_sift[k] = atom.get_parent().sc_atom_ring_inter_integer_sift[k] + 1
+                                    else:
+                                        atom.get_parent().sc_atom_ring_inter_integer_sift[k] = atom.get_parent().sc_atom_ring_inter_integer_sift[k] + 1
                     
-                    # WRITE ATOM-RING INTERACTION TO FILE
-                    output = [
-                        make_pymol_string(atom),
-                        ring['ring_id'],
-                        make_pymol_string(ring['residue']),
-                        list(ring['center']),
-                        sorted(list(potential_interactions)),
-                        intra_residue_text
-                    ]
-                    
-                    fo.write('{}\n'.format('\t'.join([str(x) for x in output])))
+                # WRITE ATOM-RING INTERACTION TO FILE
+                output = [
+                    make_pymol_string(atom),
+                    ring['ring_id'],
+                    make_pymol_string(ring['residue']),
+                    list(ring['center']),
+                    sorted(list(potential_interactions)),
+                    intra_residue_text,
+                    contact_type
+                ]
+                
+                fo.write('{}\n'.format('\t'.join([str(x) for x in output])))
             
             # WRITE RING OUT TO RING FILE
             output = [
