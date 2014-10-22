@@ -38,7 +38,9 @@ import openbabel as ob
 # CONSTANTS #
 #############
 
-from config import ATOM_TYPES, CONTACT_TYPES, VDW_RADII, METALS, HALOGENS, CONTACT_TYPES_DIST_MAX, FEATURE_SIFT, VALENCE, MAINCHAIN_ATOMS, THETA_REQUIRED
+from config import ATOM_TYPES, CONTACT_TYPES, VDW_RADII, METALS, \
+                   HALOGENS, CONTACT_TYPES_DIST_MAX, FEATURE_SIFT, VALENCE, \
+                   MAINCHAIN_ATOMS, THETA_REQUIRED, SIFT_LABELS
 
 ###########
 # CLASSES #
@@ -609,6 +611,7 @@ Dependencies:
 - Numpy
 - BioPython (>= v1.60)
 - OpenBabel (with Python bindings)
+- igraph (if using graph output)
 
 ''', formatter_class=argparse.RawTextHelpFormatter)
     
@@ -633,12 +636,85 @@ Dependencies:
     #parser.add_argument('-st', '--sasa-threshold', type=float, default=1.0, help='Floating point solvent accessible surface area threshold (squared Angstroms) for considering an atom as \'accessible\' or not.')
     #parser.add_argument('-ca', '--consider-all', action='store_true', help='Consider all entity/selection atoms, not just solvent accessible ones. If this is set, SASAs won\'t be calculated.')
     #parser.add_argument('-spdb', '--sasa-pdb', action='store_true', help='Store a PDB with atom b-factors set based on boolean solvent accessibility.')
+    parser.add_argument('-g', '--graph', action='store_true', help='Generate graph network outputs.')
     parser.add_argument('-op', '--output-postfix', type=str, help='Custom text to append to output filename (but before .extension).')
     parser.add_argument('-v', '--verbose', action='store_true', help='Be chatty.')
  
     args = parser.parse_args()
     
     pdb_filename = args.pdb
+    
+    # GRAPH OUTPUT SPECIFICS
+    if args.graph:
+        
+        # IMPORT
+        import igraph
+        
+        # FUNCTIONS
+        def sift_to_bool(x):
+            
+            return bool(int(x))
+        
+        def add_vertex_without_duplication(g, name, **kwargs):
+            '''
+            By default, igraph allows you to add nodes with a name that already exists
+            in the graph.
+            
+            This function adds a node with a name to a graph, but ensures that the name
+            isn't already given to an existing node.
+            '''
+            
+            try:
+                g.vs.find(name=name)
+            except (ValueError, KeyError):
+                g.add_vertex(name=name)
+                
+                if kwargs:
+                    node = g.vs.find(name=name)
+                    
+                    for k, v in kwargs.iteritems():
+                        node[k] = v
+        
+        def add_standard_contact_to_base_graph(g, atom_bgn, atom_end, SIFt, contact_type):
+            '''
+            '''
+            
+            # GRAPH OPTIONS
+            #
+            # - RESIDUE OR ATOM LEVEL
+            # - CONTACT TYPES TO INCLUDE
+            # - INTER, INTRA OR BOTH
+            # - SIMPLE OR COMPLEX GRAPH
+            #     SIMPLE HAS ONE CONNECTION BETWEEN NODES, THAT EDGE CAN HAVE MULTIPLE LABELS
+            #     COMPLEX CAN HAVE MULTIPLE CONNECTIONS (I.E. CONTACTS BETWEEN NODES)
+            
+            node_bgn = make_pymol_string(atom_bgn)
+            node_end = make_pymol_string(atom_end)
+            
+            node_bgn_residue = make_pymol_string(atom_bgn.get_parent())
+            node_end_residue = make_pymol_string(atom_end.get_parent())
+            
+            node_bgn_chain = make_pymol_string(node_bgn_residue.get_parent())
+            node_end_chain = make_pymol_string(node_end_residue.get_parent())
+            
+            add_vertex_without_duplication(g, name=node_bgn, residue=node_bgn_residue, chain=node_bgn_chain)
+            add_vertex_without_duplication(g, name=node_end, residue=node_end_residue, chain=node_end_chain)
+            
+            interactions = []
+            
+            for e, pos in enumerate(SIFt):
+                
+                if pos:
+                    interactions.append(SIFT_LABELS[e])
+            
+            interactions = ';'.join(interactions)
+            
+            g.add_edge(node_bgn, node_end,
+                       interactions=interactions,
+                       contact_type=contact_type)
+        
+        # MAIN CODE
+        base_graph = igraph.Graph()
     
     VDW_COMP_FACTOR = args.vdw_comp
     INTERACTING_THRESHOLD = args.interacting
@@ -1643,6 +1719,10 @@ Dependencies:
             update_atom_fsift(atom_bgn, fsift, contact_type)
             update_atom_fsift(atom_end, fsift, contact_type)
             
+            # UPDATE GRAPH NETWORK
+            if args.graph:
+                add_standard_contact_to_base_graph(base_graph, atom_bgn, atom_end, SIFt, contact_type)
+            
             # WRITE OUT CONTACT SIFT TO FILE
             if args.selection:
                 if contact_type in ('INTER', 'SELECTION_WATER', 'WATER_WATER'):
@@ -2082,9 +2162,6 @@ Dependencies:
             
             
             fo.write('{}\n'.format('\t'.join([str(x) for x in output_list])))
-        
     
     logging.info('Program End. Maximum memory usage was {}.'.format(max_mem_usage()))
-
-
 
