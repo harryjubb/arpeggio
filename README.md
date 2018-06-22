@@ -38,13 +38,14 @@ Arpeggio's Docker image is [hosted on DockerHub](https://hub.docker.com/r/harryj
 
 Once downloaded, Arpeggio can be run using:
 
-    docker run --rm -v "$(pwd)":/run -it arpeggio python arpeggio.py /run/1XKK.pdb -s RESNAME:FMM -v
+    docker run --rm -v "$(pwd)":/run -u `id -u`:`id -g` -it arpeggio python arpeggio.py /run/1XKK.pdb -s RESNAME:FMM -v
 
 Breaking this down:
 
-- `docker run`: to run the image
-- `--rm`: to clean up the Docker container when the run is finished
-- `-v`: to bind-mount a host machine directory in the container (with your input files, and where your output files will appear). In this case, the current working directory will be mounted to `/run` in the container
+- `docker run`: run the image
+- `--rm`: clean up the Docker container when the run is finished
+- `-v`: bind-mount a host machine directory in the container (with your input files, and where your output files will appear). In this case, the current working directory will be mounted to `/run` in the container
+- ``-u `id -u`:`id -g` ``: Set the user and group in the Docker container to match the host user and group running the container, so that any files written are written as the correct user
 - `-it`: interactive run with a pseudo-TTY terminal
 - `arpeggio`: the name of the built Docker image
 - `python arpeggio.py`: run Arpeggio
