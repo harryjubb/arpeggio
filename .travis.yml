@@ -5,6 +5,11 @@ language: python
 services:
   - docker
 
+notifications:
+  email:
+    on_success: change
+    on_failure: always
+
 before_install:
   docker build -t harryjubb/arpeggio .
 
