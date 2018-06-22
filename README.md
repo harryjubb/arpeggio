@@ -2,8 +2,7 @@
 
 [![Build Status](https://travis-ci.org/harryjubb/arpeggio.svg?branch=master)](https://travis-ci.org/harryjubb/arpeggio)
 
-Outline
---------
+## Outline
 
 Arpeggio calculates interatomic contacts based on the rules defined in [CREDO](http://marid.bioc.cam.ac.uk/credo). The program is freely available and requires only Open Source dependencies.
 
@@ -19,24 +18,25 @@ ISSN 0022-2836,
 https://doi.org/10.1016/j.jmb.2016.12.004.
 (http://www.sciencedirect.com/science/article/pii/S0022283616305332)
 
-Getting Started
----------------
+## Getting Started
 
-## Web Interface
+### Web Interface
 
 If you would like to run Arpeggio on a small number of individual structures, the easiest way to get started is to use the [web interface](http://biosig.unimelb.edu.au/arpeggioweb/).
 
-## Programmatically
+### Programmatically
 
 If you need to use Arpeggio programmatically or to run for many structures:
 
-The easiest way to get set up with Arpeggio is using Docker.
+The easiest way to get started is using [Docker](https://www.docker.com/).
 
-With Docker installed, you can build the docker image from inside this repository with:
+#### Using the public Docker image
 
-    docker build -t 'arpeggio' .
+Arpeggio's Docker image is [hosted on DockerHub](https://hub.docker.com/r/harryjubb/arpeggio/). To use:
 
-Once built, Arpeggio can be run using the Docker image:
+    docker pull harryjubb/arpeggio
+
+Once downloaded, Arpeggio can be run using:
 
     docker run --rm -v "$(pwd)":/run -it arpeggio python arpeggio.py /run/1XKK.pdb -s RESNAME:FMM -v
 
@@ -51,12 +51,17 @@ Breaking this down:
 - `/run/1XKK.pdb`: a PDB file in our mounted host directory
 - `-s RESNAME:FMM -v`: options passed to Arpeggio, in this case, to calculate interactions for residue with name FMM, and show verbose output
 
-We will be publishing the image to Dockerhub shortly.
+#### Building the Docker image
+
+You can build the docker image from inside this repository with:
+
+    docker build -t 'arpeggio' .
+
+#### Installing without Docker
 
 If it is not possible to use Docker, please read on for dependencies for manual installation.
 
-Dependencies
-------------
+## Dependencies
 
 Arpeggio is written in Python and currently has the following dependencies:
 
@@ -72,8 +77,7 @@ Arpeggio is written in Python and currently has the following dependencies:
 
 Arpeggio may work with earlier versions of BioPython, however these haven't been tested. It is recommended that each dependency be the latest version.
 
-Running
--------
+## Running
 
 `python arpeggio.py pdb [options]`
 
@@ -81,17 +85,15 @@ Use `python arpeggio.py -h` for available options.
 
 Arpeggio doesn't do any checking of your PDB structure, other than what BioPython does by default. Alternate locations and missing density are not explicitly accounted for and may result in anomalous results. Please use with caution.
 
-Frequently Asked Questions
---------------------------
+## Frequently Asked Questions
 
-**BioPython/OpenBabel are complaining about my structure, what's happening?**
+### BioPython/OpenBabel are complaining about my structure, what's happening?
 
 Both can be picky about the format of PDB files, for example atom serials must be unique (to map between BioPython and OpenBabel structures), and other issues can raise BioPython errors.
 
 The `clean_pdb.py` script in https://github.com/harryjubb/pdbtools resolves a number of common errors; if your structure doesn't work, try using that first before trying Arpeggio on the cleaned structure.
 
-Output Files
-------------
+## Output Files
 
 ### `*.ari`
 
