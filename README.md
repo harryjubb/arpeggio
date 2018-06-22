@@ -38,7 +38,7 @@ Arpeggio's Docker image is [hosted on DockerHub](https://hub.docker.com/r/harryj
 
 Once downloaded, Arpeggio can be run using:
 
-    docker run --rm -v "$(pwd)":/run -u `id -u`:`id -g` -it arpeggio python arpeggio.py /run/1XKK.pdb -s RESNAME:FMM -v
+    docker run --rm -v "$(pwd)":/run -u `id -u`:`id -g` -it harryjubb/arpeggio python arpeggio.py /run/1XKK.pdb -s RESNAME:FMM -v
 
 Breaking this down:
 
