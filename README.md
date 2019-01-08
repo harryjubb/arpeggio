@@ -94,6 +94,12 @@ Both can be picky about the format of PDB files, for example atom serials must b
 
 The `clean_pdb.py` script in https://github.com/harryjubb/pdbtools resolves a number of common errors; if your structure doesn't work, try using that first before trying Arpeggio on the cleaned structure.
 
+### My results don't match the output of the web server, what's happening?
+
+In order to prevent errors from BioPython/OpenBabel (described above) causing Arpeggio to fail, the web server preprocesses input PDB files before running Arpeggio. The `clean_pdb.py` script in https://github.com/harryjubb/pdbtools is used to resolve a number of common errors.
+
+Please also be aware that changing command line options may also result in differences from the web server's output. Arpeggio is run on the web server with the `-wh` option, and an optional selection.
+
 ## Output Files
 
 ### `*.ari`
