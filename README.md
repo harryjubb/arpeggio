@@ -96,7 +96,7 @@ The `clean_pdb.py` script in https://github.com/harryjubb/pdbtools resolves a nu
 
 ### My results don't match the output of the web server, what's happening?
 
-In order to prevent errors from BioPython/OpenBabel (described above) causing Arpeggio to fail, the web server preprocesses input PDB files before running Arpeggio. The `clean_pdb.py` script in https://github.com/harryjubb/pdbtools is used to resolve a number of common errors.
+In order to prevent errors from BioPython/OpenBabel (described above) causing Arpeggio to fail, the web server preprocesses input PDB files before running Arpeggio. The `clean_pdb.py` script in https://github.com/harryjubb/pdbtools provides this functionality outside of the web server.
 
 Please also be aware that changing command line options may also result in differences from the web server's output. Arpeggio is run on the web server with the `-wh` option, and an optional selection.
 
