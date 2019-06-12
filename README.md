@@ -20,6 +20,8 @@ https://doi.org/10.1016/j.jmb.2016.12.004.
 
 ## Getting Started
 
+**Stuck?** Start here, and see also the [FAQ](https://github.com/harryjubb/arpeggio#frequently-asked-questions).
+
 ### Web Interface
 
 If you would like to run Arpeggio on a small number of individual structures, the easiest way to get started is to use the [web interface](http://biosig.unimelb.edu.au/arpeggioweb/).
@@ -87,6 +89,8 @@ Use `python arpeggio.py -h` for available options.
 Arpeggio doesn't do any checking of your PDB structure, other than what BioPython does by default. Alternate locations and missing density are not explicitly accounted for and may result in anomalous results. Please use with caution.
 
 ## Frequently Asked Questions
+
+**See also the [GitHub issue questions](https://github.com/harryjubb/arpeggio/issues?utf8=%E2%9C%93&q=label%3Aquestion).**
 
 ### BioPython/OpenBabel are complaining about my structure, what's happening?
 
