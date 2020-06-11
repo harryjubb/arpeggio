@@ -104,6 +104,10 @@ In order to prevent errors from BioPython/OpenBabel (described above) causing Ar
 
 Please also be aware that changing command line options may also result in differences from the web server's output. Arpeggio is run on the web server with the `-wh` option, and an optional selection.
 
+### What happens if my structure does or doesn't have hydrogens?
+
+Arpeggio will add hydrogens using OpenBabel if none are present in the input structure. If your input structure has at least one hydrogen, then hydrogen addition is skipped, and input hydrogens are used. Arpeggio will not add any missing hydrogens to any input structure with at least one hydrogen in (e.g. protein hydrogens will not be added if the ligand is hydrogenated). It is advisable to pre-prepare input structures with a robust hydrogen addition method before running Arpeggio.
+
 ## Output Files
 
 ### `*.ari`
