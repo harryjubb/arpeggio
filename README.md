@@ -108,6 +108,12 @@ Please also be aware that changing command line options may also result in diffe
 
 Arpeggio will add hydrogens using OpenBabel if none are present in the input structure. If your input structure has at least one hydrogen, then hydrogen addition is skipped, and input hydrogens are used. Arpeggio will not add any missing hydrogens to any input structure with at least one hydrogen in (e.g. protein hydrogens will not be added if the ligand is hydrogenated). It is advisable to pre-prepare input structures with a robust hydrogen addition method before running Arpeggio.
 
+### How do I determine interactions for multiple residues, e.g. for a protein-protein interface?
+
+Specify multiple `-s` selection options to define your interface, e.g. `-s /A/100/ -s /A/101/ -s /A/102/ -s /A/103/ -s /A/104/ -s /A/104/ -s /A/106/`
+
+Run `arpeggio.py` with the `-h` option to see help on the selection syntax.
+
 ## Output Files
 
 ### `*.ari`
