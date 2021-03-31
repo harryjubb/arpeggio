@@ -1,7 +1,5 @@
 # Arpeggio
 
-[![Build Status](https://travis-ci.org/harryjubb/arpeggio.svg?branch=master)](https://travis-ci.org/harryjubb/arpeggio)
-
 ## Outline
 
 Arpeggio calculates interatomic contacts based on the rules defined in [CREDO](http://marid.bioc.cam.ac.uk/credo). The program is freely available and requires only Open Source dependencies.
@@ -17,6 +15,11 @@ Pages 365-371,
 ISSN 0022-2836,
 https://doi.org/10.1016/j.jmb.2016.12.004.
 (http://www.sciencedirect.com/science/article/pii/S0022283616305332)
+
+**Note:** This repository is not currently under active development, however pull requests and issues are welcome. Arpeggio is usable with the instructions below: however this is a more up-to-date and refactored version developed by the wwPDB available at https://github.com/PDBeurope/arpeggio.
+
+- If you would like to run the original version, or use with Docker or use the web service, please follow the instructions below
+- If you would like to run a more up-to-date version with Python 3.x support, mmCIF support, and more recent bug fixes, using Anaconda, it's recommended to use https://github.com/PDBeurope/arpeggio
 
 ## Getting Started
 
