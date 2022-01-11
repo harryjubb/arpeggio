@@ -209,6 +209,14 @@ def selection_parser(selection_list, atom_list):
                     else:
                         raise SelectionError(original_selection)
 
+                # ALLOW IF RESNUM STARTS WITH NEGATIVE SIGN
+                elif selection[1][0] == '-':
+                    if selection[1][-1].isalpha():
+                        residue_number = int(selection[1][:-1])
+                        insertion_code = selection[1][-1]
+                    else:
+                        residue_number = int(selection[1])
+
                 else:
                     raise SelectionError(original_selection)
 
